@@ -4,7 +4,7 @@ import App from './App.jsx';
 import { BrowserRouter } from "react-router-dom";
 import { AuthContextProvider } from "./AuthContext";
 import './App.scss';
-import './pages.scss';
+//import './pages.scss';
 import { PriceContextProvider } from './PriceContext.jsx';
 
 
