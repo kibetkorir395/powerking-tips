@@ -45,19 +45,33 @@ const handlePayment = async (
 
     if (!res.ok) {
       setProcessing(false);
-      alert(`HTTP error! status: ${res.status}`);
+      Swal.fire({
+        icon: 'error',
+        title: 'Payment Initialization Failed',
+        text: `HTTP error! status: ${res.status}`,
+        confirmButtonColor: '#d33',
+        confirmButtonText: 'Try Again',
+        timer: 5000,
+        timerProgressBar: true,
+      });
       return;
     }
     
     const myData = await res.json();
-    console.log('Payment Response:', myData);
     
     // Store order tracking ID for polling
     if (myData.order_tracking_id) {
       setOrderTrackingId(myData.order_tracking_id);
     }
     
-    alert("Payment Initialized");
+    Swal.fire({
+      icon: 'success',
+      title: 'Payment Initialized!',
+      text: 'Redirecting you to payment gateway...',
+      showConfirmButton: false,
+      timer: 2000,
+      timerProgressBar: true,
+    });
 
     // Open the payment modal with the redirect URL
     openPaymentModal(myData.redirect_url, myData.order_tracking_id);
@@ -65,7 +79,14 @@ const handlePayment = async (
     
   } catch (err) {
     setProcessing(false);
-    alert('Error: ' + err.message);
+    Swal.fire({
+      icon: 'error',
+      title: 'Oops...',
+      text: 'Error: ' + err.message,
+      confirmButtonColor: '#d33',
+      confirmButtonText: 'OK',
+      footer: '<a href="https://pesapal.com/support">Need help?</a>',
+    });
   }
 };
 
@@ -103,18 +124,50 @@ export default function PesapalPayments({ setUserData }) {
         subscription: returnPeriod(),
         subDate: currentDate
       }, { merge: true }).then(async (response) => {
-        alert('You Have Upgraded To ' + returnPeriod() + " VIP");
-      }).then(async () => {
-        await getUser(currentUser.email, setUserData);
-      }).then(async () => {
-        navigate('/');
-      }).catch(async (error) => {
+        await Swal.fire({
+            icon: 'success',
+            title: '🎉 Welcome to VIP!',
+            html: `
+            <div style="text-align: center;">
+              <h3 style="color: #4CAF50; margin-bottom: 10px;">You've Been Upgraded!</h3>
+              <p style="font-size: 16px; margin: 5px 0;">You are now a <strong>${returnPeriod()}</strong> VIP member</p>
+              <p style="font-size: 14px; color: #666;">Enjoy exclusive tips and premium content</p>
+            </div>
+          `,
+            showConfirmButton: true,
+            confirmButtonColor: '#4CAF50',
+            confirmButtonText: 'Start Exploring!',
+            timer: 5000,
+            timerProgressBar: true,
+            backdrop: `
+            rgba(0,0,0,0.4)
+            left top
+            no-repeat
+          `,
+          });
+        })
+        .then(async () => {
+          await getUser(currentUser.email, setUserData);
+        })
+        .then(async () => {
+          navigate('/');
+        }).catch(async (error) => {
         const errorMessage = await error.message;
-        alert(errorMessage);
+        Swal.fire({
+            icon: 'error',
+            title: 'Upgrade Failed',
+            text: errorMessage,
+            confirmButtonColor: '#d33',
+          });
       });
     } catch (error) {
       console.error("Error upgrading user:", error.message);
-      alert("Error upgrading user: " + error.message);
+      Swal.fire({
+        icon: 'error',
+        title: 'System Error',
+        text: 'Error upgrading user: ' + error.message,
+        confirmButtonColor: '#d33',
+      });
     }
   };
 
@@ -169,7 +222,6 @@ export default function PesapalPayments({ setUserData }) {
       
       return { completed: false, status: 'pending' };
     } catch (err) {
-      console.error('Error checking payment status:', err);
       return { completed: false, status: 'error', error: err.message };
     }
   };
@@ -225,7 +277,15 @@ export default function PesapalPayments({ setUserData }) {
                 clearInterval(pollInterval);
                 setPolling(false);
                 Swal.close();
-                alert(`Payment ${result.status}. Please try again.`);
+                Swal.fire({
+                  icon: 'error',
+                  title: 'Payment Failed',
+                  text: 'Your payment could not be processed. Please try again or use a different payment method.',
+                  confirmButtonColor: '#d33',
+                  confirmButtonText: 'Try Again',
+                  footer:
+                    '<a href="https://pesapal.com/support">Contact Support</a>',
+                });
               }
               
               // Stop polling after maximum attempts
@@ -233,7 +293,19 @@ export default function PesapalPayments({ setUserData }) {
                 clearInterval(pollInterval);
                 setPolling(false);
                 Swal.close();
-                alert('Payment status check timed out. Please check your email for confirmation or contact support.');
+                Swal.fire({
+                  icon: 'warning',
+                  title: 'Payment Status Timeout',
+                  html: `
+                    <p>We're still waiting for payment confirmation.</p>
+                    <p>Please check your email for payment receipt or <a href="#" onclick="window.location.reload()">try refreshing</a>.</p>
+                  `,
+                  confirmButtonColor: '#3085d6',
+                  confirmButtonText: 'Check Email',
+                  showCancelButton: true,
+                  cancelButtonText: 'Close',
+                });
+                
               }
             } catch (err) {
               console.error('Error in polling:', err);
@@ -253,7 +325,19 @@ export default function PesapalPayments({ setUserData }) {
 
   const handlePayClick = async () => {
     if (!currentUser) {
-      alert('Please login first');
+      Swal.fire({
+        icon: 'warning',
+        title: 'Login Required',
+        text: 'Please login first to continue with payment',
+        confirmButtonColor: '#3085d6',
+        confirmButtonText: 'Login Now',
+        showCancelButton: true,
+        cancelButtonText: 'Cancel',
+      }).then((result) => {
+        if (result.isConfirmed) {
+          navigate('/login');
+        }
+      });
       return;
     }
 
