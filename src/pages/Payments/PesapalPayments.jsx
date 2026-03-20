@@ -235,47 +235,24 @@ export default function PesapalPayments({ setUserData }) {
     Swal.fire({
       title: 'Complete Your Payment',
       html: `
-        <div style="width: 100%; height: 550px; overflow: hidden; position: relative; border-radius: 8px;">
+        <div style="width: 100%; height: 500px; overflow: hidden;">
           <iframe 
             src="${paymentUrl}" 
-            style="width: 100%; height: 100%; border: none; border-radius: 8px; background: white;"
-            title="Pesapal Payment Gateway"
-            sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-top-navigation allow-top-navigation-by-user-activation allow-modals allow-presentation"
-            allow="payment *; camera; microphone; fullscreen"
-            referrerpolicy="no-referrer-when-downgrade"
+            style="width: 100%; height: 100%; border: none;"
+            title="Pesapal Payment"
+            sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-top-navigation allow-top-navigation-by-user-activation"
+            allow="payment *;"
           ></iframe>
         </div>
       `,
       showConfirmButton: false,
       showCloseButton: true,
-      closeButtonHtml: '×',
-      width: '1000px',
-      padding: '0',
-      background: '#f8f9fa',
-      backdrop: true,
-      allowOutsideClick: false,
-      allowEscapeKey: true,
+      width: '800px',
       customClass: {
-        container: 'payment-swal-container',
-        popup: 'payment-swal-popup',
-        closeButton: 'payment-swal-close'
+        popup: 'payment-modal-popup'
       },
       didOpen: () => {
         console.log('Payment modal opened with URL:', paymentUrl);
-        
-        // Show toast notification
-        setTimeout(() => {
-          Swal.fire({
-            icon: 'info',
-            title: 'Processing Payment',
-            text: 'Please complete your payment in the window above. We\'ll notify you once confirmed.',
-            toast: true,
-            position: 'top-end',
-            showConfirmButton: false,
-            timer: 5000,
-            timerProgressBar: true
-          });
-        }, 1000);
 
         // Start polling after 20 seconds
         setTimeout(() => {
@@ -533,63 +510,18 @@ export default function PesapalPayments({ setUserData }) {
 
 // Add styles
 const additionalStyles = `
-.payment-swal-container {
-  z-index: 9999 !important;
-}
-
-.payment-swal-popup {
-  height: 650px !important;
-  max-width: 1000px !important;
+.swal2-popup {
   padding: 0 !important;
-  overflow: hidden !important;
-  border-radius: 16px !important;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.3) !important;
-}
-
-.payment-swal-close {
-  position: absolute !important;
-  right: 15px !important;
-  top: 15px !important;
-  color: #666 !important;
-  font-size: 28px !important;
-  font-weight: bold !important;
-  z-index: 10000 !important;
-  background: white !important;
-  width: 35px !important;
-  height: 35px !important;
-  border-radius: 50% !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.2) !important;
-  transition: all 0.3s ease !important;
-}
-
-.payment-swal-close:hover {
-  background: #f0f0f0 !important;
-  transform: scale(1.1) !important;
-  color: #333 !important;
 }
 
 .swal2-title {
-  color: #333 !important;
-  font-weight: 600 !important;
-  font-size: 24px !important;
-  padding: 20px 20px 0 20px !important;
+  padding: 1rem !important;
   margin: 0 !important;
 }
 
-.swal2-html-container {
-  margin: 0 !important;
-  padding: 0 !important;
-  overflow: hidden !important;
-}
-
-.swal2-toast {
-  border-radius: 10px !important;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.2) !important;
-  font-size: 14px !important;
-  padding: 12px 20px !important;
+.payment-modal-popup {
+  height: 600px !important;
+  max-width: 900px !important;
 }
 
 .btn {
