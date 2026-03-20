@@ -1,6 +1,6 @@
 import { useState } from "react";
 import CryptoPayments from "./CryptoPayments";
-import './Payments.scss'
+//import './Payments.scss'
 import AppHelmet from "../../components/AppHelmet";
 import PesapalPayments from "./PesapalPayments";
 
