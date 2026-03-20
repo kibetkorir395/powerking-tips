@@ -17,13 +17,11 @@ export default function Tips({ userData }) {
   const [isPremium, setIsPremium] = useState(false);
 
   const options = { year: 'numeric', month: 'long' };
-  const date = new Date(); // current date
+  const date = new Date();
   const formattedDate = date.toLocaleDateString('en-US', options);
 
   function formatDate(dateString) {
-    // Create a new Date object from the input string
     const date = new Date(dateString);
-    // Format the date as mm/dd/yyyy
     return date.toLocaleDateString('en-US');
   }
 
@@ -37,44 +35,32 @@ export default function Tips({ userData }) {
     }
   }, [userData])
 
-
   useLayoutEffect(() => {
     window.scrollTo(0, 0)
   });
+
   const [isOnline] = useState(() => {
     return navigator.onLine
   })
-
 
   useEffect(() => {
     getTips(tipsPerPage, setTips, setLoading, formatDate(currentDate));
   }, [isOnline, tipsPerPage, currentDate]);
 
-  /*useEffect(() => {
-    let dates = [];
-    for (let i = 0; i < 7; i++) {
-      let date = new Date();
-      date.setDate(date.getDate() - i);
-      dates.push(date.toISOString().split('T')[0]);
-    }
-    setDays(dates.reverse())
-  }, []);*/
-
   useEffect(() => {
-  let dates = [];
-  const today = new Date();
-  
-  for (let i = 0; i < 7; i++) {
-    let date = new Date(today);
-    date.setDate(date.getDate() - i);
-    // Use local date methods instead of ISO string
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    dates.push(`${year}-${month}-${day}`);
-  }
-  setDays(dates.reverse());
-}, []);
+    let dates = [];
+    const today = new Date();
+    
+    for (let i = 0; i < 7; i++) {
+      let date = new Date(today);
+      date.setDate(date.getDate() - i);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      dates.push(`${year}-${month}-${day}`);
+    }
+    setDays(dates.reverse());
+  }, []);
 
   useEffect(() => {
     days && setCurrentDate(days[days.length - 1])
@@ -96,67 +82,11 @@ export default function Tips({ userData }) {
     getTips(tipsPerPage, setTips, setLoading, formatDate(currentDate));
   }
 
-
-  /*const returnDate = (date) => {
-    const d = new Date(date);
-    let day = d.getDay();
-    let dateWeek = d.getDate()
-    let dayWeek;
-    switch (day) {
-      case 0:
-        dayWeek = "Sunday";
-        break;
-      case 1:
-        dayWeek = "Monday";
-        break;
-      case 2:
-        dayWeek = "Tuesday";
-        break;
-      case 3:
-        dayWeek = "Wednesday";
-        break;
-      case 4:
-        dayWeek = "Thursday";
-        break;
-      case 5:
-        dayWeek = "Friday";
-        break;
-      case 6:
-        dayWeek = "Saturday";
-        break;
-      default:
-        dayWeek = "Saturday";
-    }
-    return dateWeek + " " + dayWeek;
-  }*/
-
   const returnDate = (dateString) => {
-  const date = new Date(dateString);
-  const options = { weekday: 'long', day: 'numeric' };
-  return date.toLocaleDateString('en-US', options);
-};
-
-  /* const returnDate = (dateString) => {
-    const [year, month, day] = dateString.split('-').map(Number);
-    const date = new Date(year, month - 1, day); // Month is zero-indexed
-
-    if (isNaN(date.getTime())) {
-      console.error("Invalid date:", dateString);
-      return "Invalid Date";
-    }
-
-    const today = new Date();
-    const isToday =
-      date.getDate() === today.getDate() &&
-      date.getMonth() === today.getMonth() &&
-      date.getFullYear() === today.getFullYear();
-
-    const weekday = date.toLocaleDateString('en-US', { weekday: 'short' });
-    const monthDay = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-
-    return isToday ? `${weekday}, Today` : `${weekday} ${monthDay}`;
-  };*/
-
+    const date = new Date(dateString);
+    const options = { weekday: 'long', day: 'numeric' };
+    return date.toLocaleDateString('en-US', options);
+  };
 
   const handleClick = async (tip) => {
     setActive(tip)
@@ -170,55 +100,86 @@ export default function Tips({ userData }) {
         <div className="filter-wrapper">
           <p>{formattedDate}</p>
           <select onChange={(e) => setCategory(e.target.value)} value={category}>
-            <option value="free" >Free</option>
+            <option value="free">Free</option>
             <option value="premium">Premium</option>
           </select>
         </div>
+        
         <div className="filter">
           {
             days && days.map((day) => {
-              return <button className={`btn-filter ${(currentDate === day) && 'active'}`} onClick={() => setCurrentDate(day)} key={days.indexOf(day)} aria-label={day}>
-                <span>{returnDate(day).split(" ")[1].substring(0, 3)}</span>
-                <span>{returnDate(day).split(" ")[0]}</span>
-              </button>
+              return (
+                <button 
+                  className={`btn-filter ${(currentDate === day) && 'active'}`} 
+                  onClick={() => setCurrentDate(day)} 
+                  key={days.indexOf(day)} 
+                  aria-label={day}
+                >
+                  <span>{returnDate(day).split(" ")[1]?.substring(0, 3) || ''}</span>
+                  <span>{returnDate(day).split(" ")[0]}</span>
+                </button>
+              )
             })
           }
         </div>
 
-        <table className='tips-table'>
-          <tr>
-            <th>TIME</th>
-            <th>HOME</th>
-            <th>AWAY</th>
-            <th>TIP</th>
-            <th>ODDS</th>
-            <th>RESULTS</th>
-          </tr>
-          {
-            (tips.length > 0) && tips.filter((tip) => (category === 'free') ? (tip.premium === false) : (tip.premium === true)).map(tip => {
-              return (<tr key={tip.id} onClick={() => handleClick(tip)} >
-                <td>
-                  {tip.time}
-                </td>
-                <td style={{/*{
-                  color: (!isPremium && (tip.premium && (tip.date === formatDate(days[days.length - 1])))) && 'transparent',
-                  textShadow: (!isPremium && (tip.premium && (tip.date === formatDate(days[days.length - 1])))) && '0 0 5px rgba(0,0,0,.2)'
-                }*/}}>{(!isPremium && (tip.premium && (tip.date === formatDate(days[days.length - 1])))) ? "Join VIP To View" : tip.home}</td>
-                <td style={{/*{
-                  color: (!isPremium && (tip.premium && (tip.date === formatDate(days[days.length - 1])))) && 'transparent',
-                  textShadow: (!isPremium && (tip.premium && (tip.date === formatDate(days[days.length - 1])))) && '0 0 5px rgba(0,0,0,0.2)'
-                }*/}}>{(!isPremium && (tip.premium && (tip.date === formatDate(days[days.length - 1])))) ? "Closed" : tip.away}</td>
-                <td>{tip.pick}</td>
-                <td>{tip.odd}</td>
-                <td>{tip.won === 'won' ? <span className='won'><p>Won</p> <Verified className='icon' /></span> : tip.status === "pending" ? <span>?-?</span> : <span className='lost'><p>Lost</p> <Error className='icon' /></span>}</td>
-              </tr>)
-            })
-          }
-
+        <table className="tips-table wrapper">
+          <thead>
+            <tr>
+              <th>TIME</th>
+              <th>HOME</th>
+              <th>AWAY</th>
+              <th>TIP</th>
+              <th>ODDS</th>
+              <th>RESULTS</th>
+            </tr>
+          </thead>
+          <tbody>
+            {
+              (tips.length > 0) && tips.filter((tip) => 
+                (category === 'free') ? (tip.premium === false) : (tip.premium === true)
+              ).map(tip => {
+                return (
+                  <tr key={tip.id} onClick={() => handleClick(tip)}>
+                    <td>{tip.time}</td>
+                    <td>
+                      {(!isPremium && (tip.premium && (tip.date === formatDate(days?.[days.length - 1])))) 
+                        ? "Join VIP To View" 
+                        : tip.home}
+                    </td>
+                    <td>
+                      {(!isPremium && (tip.premium && (tip.date === formatDate(days?.[days.length - 1])))) 
+                        ? "Closed" 
+                        : tip.away}
+                    </td>
+                    <td>{tip.pick}</td>
+                    <td>{tip.odd}</td>
+                    <td>
+                      {tip.won === 'won' ? (
+                        <span className='won'>
+                          <p>Won</p>
+                          <Verified className='icon' />
+                        </span>
+                      ) : tip.status === "pending" ? (
+                        <span>?-?</span>
+                      ) : (
+                        <span className='lost'>
+                          <p>Lost</p>
+                          <Error className='icon' />
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })
+            }
+          </tbody>
         </table>
+
         <div className="wrapper">
           {
-            (!isOnline && (tips.length === 0) && !loading) && <div className='no-network'>
+            (!isOnline && (tips.length === 0) && !loading) && 
+            <div className='no-network'>
               <h1>Nothing Yet!</h1>
               <p>This could be a network issue. Check you internet and try again.</p>
               <NetworkWifi1Bar className='wifi' />
