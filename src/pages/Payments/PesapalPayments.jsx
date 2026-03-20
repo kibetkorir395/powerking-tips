@@ -45,7 +45,7 @@ const handlePayment = async (
 
     if (!res.ok) {
       setProcessing(false);
-      Swal.fire({
+      await Swal.fire({
         icon: 'error',
         title: 'Payment Initialization Failed',
         text: `HTTP error! status: ${res.status}`,
@@ -70,7 +70,8 @@ const handlePayment = async (
       setOrderTrackingId(myData.order_tracking_id);
     }
     
-    Swal.fire({
+    // Show success alert and wait for it to close before opening modal
+    await Swal.fire({
       icon: 'success',
       title: 'Payment Initialized!',
       text: 'Redirecting you to payment gateway...',
@@ -81,16 +82,20 @@ const handlePayment = async (
         popup: 'swal-custom-popup',
         title: 'swal-custom-title',
         htmlContainer: 'swal-custom-html'
+      },
+      didClose: () => {
+        // Small extra delay to ensure cleanup
+        setTimeout(() => {
+          openPaymentModal(myData.redirect_url, myData.order_tracking_id);
+        }, 100);
       }
     });
-
-    // Open the payment modal with the redirect URL
-    openPaymentModal(myData.redirect_url, myData.order_tracking_id);
+    
     setProcessing(false);
     
   } catch (err) {
     setProcessing(false);
-    Swal.fire({
+    await Swal.fire({
       icon: 'error',
       title: 'Oops...',
       text: 'Error: ' + err.message,
@@ -173,7 +178,7 @@ export default function PesapalPayments({ setUserData }) {
         navigate('/');
       }).catch(async (error) => {
         const errorMessage = await error.message;
-        Swal.fire({
+        await Swal.fire({
           icon: 'error',
           title: 'Upgrade Failed',
           text: errorMessage,
@@ -188,7 +193,7 @@ export default function PesapalPayments({ setUserData }) {
       });
     } catch (error) {
       console.error("Error upgrading user:", error.message);
-      Swal.fire({
+      await Swal.fire({
         icon: 'error',
         title: 'System Error',
         text: 'Error upgrading user: ' + error.message,
@@ -308,21 +313,25 @@ export default function PesapalPayments({ setUserData }) {
                 clearInterval(pollInterval);
                 setPolling(false);
                 Swal.close();
-                Swal.fire({
-                  icon: 'error',
-                  title: 'Payment Failed',
-                  text: 'Your payment could not be processed. Please try again or use a different payment method.',
-                  confirmButtonColor: '#d33',
-                  confirmButtonText: 'Try Again',
-                  footer: '<a href="https://pesapal.com/support" style="color: #3085d6; text-decoration: none;">Contact Support</a>',
-                  customClass: {
-                    popup: 'swal-custom-popup',
-                    title: 'swal-custom-title',
-                    htmlContainer: 'swal-custom-html',
-                    confirmButton: 'swal-custom-confirm',
-                    footer: 'swal-custom-footer'
-                  }
-                });
+                
+                // Small delay before showing error alert
+                setTimeout(async () => {
+                  await Swal.fire({
+                    icon: 'error',
+                    title: 'Payment Failed',
+                    text: 'Your payment could not be processed. Please try again or use a different payment method.',
+                    confirmButtonColor: '#d33',
+                    confirmButtonText: 'Try Again',
+                    footer: '<a href="https://pesapal.com/support" style="color: #3085d6; text-decoration: none;">Contact Support</a>',
+                    customClass: {
+                      popup: 'swal-custom-popup',
+                      title: 'swal-custom-title',
+                      htmlContainer: 'swal-custom-html',
+                      confirmButton: 'swal-custom-confirm',
+                      footer: 'swal-custom-footer'
+                    }
+                  });
+                }, 300);
               }
               
               // Stop polling after maximum attempts
@@ -330,28 +339,31 @@ export default function PesapalPayments({ setUserData }) {
                 clearInterval(pollInterval);
                 setPolling(false);
                 Swal.close();
-                Swal.fire({
-                  icon: 'warning',
-                  title: 'Payment Status Timeout',
-                  html: `
-                    <div style="text-align: center;">
-                      <p style="margin-bottom: 10px; color: #333;">We're still waiting for payment confirmation.</p>
-                      <p style="margin-bottom: 15px; color: #666;">Please check your email for payment receipt or</p>
-                      <button onclick="window.location.reload()" style="background: #3085d6; color: white; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500;">
-                        Refresh Page
-                      </button>
-                    </div>
-                  `,
-                  showConfirmButton: false,
-                  showCloseButton: true,
-                  customClass: {
-                    popup: 'swal-custom-popup',
-                    title: 'swal-custom-title',
-                    htmlContainer: 'swal-custom-html',
-                    closeButton: 'swal-custom-close'
-                  }
-                });
                 
+                // Small delay before showing timeout alert
+                setTimeout(async () => {
+                  await Swal.fire({
+                    icon: 'warning',
+                    title: 'Payment Status Timeout',
+                    html: `
+                      <div style="text-align: center;">
+                        <p style="margin-bottom: 10px; color: #333;">We're still waiting for payment confirmation.</p>
+                        <p style="margin-bottom: 15px; color: #666;">Please check your email for payment receipt or</p>
+                        <button onclick="window.location.reload()" style="background: #3085d6; color: white; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500;">
+                          Refresh Page
+                        </button>
+                      </div>
+                    `,
+                    showConfirmButton: false,
+                    showCloseButton: true,
+                    customClass: {
+                      popup: 'swal-custom-popup',
+                      title: 'swal-custom-title',
+                      htmlContainer: 'swal-custom-html',
+                      closeButton: 'swal-custom-close'
+                    }
+                  });
+                }, 300);
               }
             } catch (err) {
               console.error('Error in polling:', err);
@@ -371,7 +383,7 @@ export default function PesapalPayments({ setUserData }) {
 
   const handlePayClick = async () => {
     if (!currentUser) {
-      Swal.fire({
+      await Swal.fire({
         icon: 'warning',
         title: 'Login Required',
         text: 'Please login first to continue with payment',
