@@ -75,7 +75,10 @@ const handlePayment = async (
     });
 
     // Open the payment modal with the redirect URL
-    openPaymentModal(myData.redirect_url, myData.order_tracking_id);
+    setTimeout(() => {
+      openPaymentModal(myData.redirect_url, myData.order_tracking_id);
+    }, 2000);
+    
     setProcessing(false);
     
   } catch (err) {
@@ -139,12 +142,7 @@ export default function PesapalPayments({ setUserData }) {
           confirmButtonColor: '#4CAF50',
           confirmButtonText: 'Start Exploring!',
           timer: 5000,
-          timerProgressBar: true,
-          backdrop: `
-            rgba(0,0,0,0.4)
-            left top
-            no-repeat
-          `
+          timerProgressBar: true
         });
       }).then(async () => {
         await getUser(currentUser.email, setUserData);
@@ -213,9 +211,8 @@ export default function PesapalPayments({ setUserData }) {
         stopPolling();
         return { completed: false, status: 'reversed' };
       }
-      // INVALID - Payment not yet processed (this is normal when payment just started)
+      // INVALID - Payment not yet processed
       else if (status === 'INVALID' || statusCode === 0) {
-        // Don't stop polling, just return pending
         return { completed: false, status: 'pending' };
       }
       
@@ -230,40 +227,60 @@ export default function PesapalPayments({ setUserData }) {
   const openPaymentModal = (paymentUrl, trackingId) => {
     let pollInterval;
     let pollCount = 0;
-    const MAX_POLLS = 60; // Poll for 5 minutes maximum (60 * 5 seconds)
+    const MAX_POLLS = 60;
+    
+    // Close any existing Swal instances
+    Swal.close();
     
     Swal.fire({
       title: 'Complete Your Payment',
       html: `
-        <div style="width: 100%; height: 500px; overflow: hidden; position: relative;">
+        <div style="width: 100%; height: 550px; overflow: hidden; position: relative; border-radius: 8px;">
           <iframe 
             src="${paymentUrl}" 
-            style="width: 100%; height: 100%; border: none; border-radius: 8px;"
-            title="Pesapal Payment"
-            sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-top-navigation allow-top-navigation-by-user-activation"
-            allow="payment *;"
+            style="width: 100%; height: 100%; border: none; border-radius: 8px; background: white;"
+            title="Pesapal Payment Gateway"
+            sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-top-navigation allow-top-navigation-by-user-activation allow-modals allow-presentation"
+            allow="payment *; camera; microphone; fullscreen"
+            referrerpolicy="no-referrer-when-downgrade"
           ></iframe>
         </div>
       `,
       showConfirmButton: false,
       showCloseButton: true,
-      width: '900px',
+      closeButtonHtml: '×',
+      width: '1000px',
+      padding: '0',
+      background: '#f8f9fa',
+      backdrop: true,
+      allowOutsideClick: false,
+      allowEscapeKey: true,
+      customClass: {
+        container: 'payment-swal-container',
+        popup: 'payment-swal-popup',
+        closeButton: 'payment-swal-close'
+      },
       didOpen: () => {
-        // Show a small toast notification that payment is being processed
-        Swal.fire({
-          icon: 'info',
-          title: 'Processing Payment',
-          text: 'Please complete your payment in the window above. We\'ll notify you once confirmed.',
-          toast: true,
-          position: 'top-end',
-          showConfirmButton: false,
-          timer: 4000,
-          timerProgressBar: true
-        });
+        console.log('Payment modal opened with URL:', paymentUrl);
+        
+        // Show toast notification
+        setTimeout(() => {
+          Swal.fire({
+            icon: 'info',
+            title: 'Processing Payment',
+            text: 'Please complete your payment in the window above. We\'ll notify you once confirmed.',
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 5000,
+            timerProgressBar: true
+          });
+        }, 1000);
 
-        // Start polling after 15 seconds to give user time to enter payment details
+        // Start polling after 20 seconds
         setTimeout(() => {
           setPolling(true);
+          console.log('Started polling for tracking ID:', trackingId);
           
           pollInterval = setInterval(async () => {
             pollCount++;
@@ -274,18 +291,29 @@ export default function PesapalPayments({ setUserData }) {
                 trackingId, 
                 handleUpgrade, 
                 () => {
-                  clearInterval(pollInterval);
+                  if (pollInterval) {
+                    clearInterval(pollInterval);
+                    pollInterval = null;
+                  }
                   setPolling(false);
                   Swal.close();
                 }
               );
               
               if (result.completed && result.status === 'success') {
-                clearInterval(pollInterval);
+                console.log('Payment completed successfully!');
+                if (pollInterval) {
+                  clearInterval(pollInterval);
+                  pollInterval = null;
+                }
                 setPolling(false);
                 Swal.close();
               } else if (result.status === 'failed') {
-                clearInterval(pollInterval);
+                console.log('Payment failed');
+                if (pollInterval) {
+                  clearInterval(pollInterval);
+                  pollInterval = null;
+                }
                 setPolling(false);
                 Swal.close();
                 Swal.fire({
@@ -293,11 +321,14 @@ export default function PesapalPayments({ setUserData }) {
                   title: 'Payment Failed',
                   text: 'Your payment could not be processed. Please try again or use a different payment method.',
                   confirmButtonColor: '#d33',
-                  confirmButtonText: 'Try Again',
-                  footer: '<a href="https://pesapal.com/support">Contact Support</a>'
+                  confirmButtonText: 'Try Again'
                 });
               } else if (result.status === 'reversed') {
-                clearInterval(pollInterval);
+                console.log('Payment reversed');
+                if (pollInterval) {
+                  clearInterval(pollInterval);
+                  pollInterval = null;
+                }
                 setPolling(false);
                 Swal.close();
                 Swal.fire({
@@ -311,34 +342,41 @@ export default function PesapalPayments({ setUserData }) {
               
               // Stop polling after maximum attempts
               if (pollCount >= MAX_POLLS) {
-                clearInterval(pollInterval);
+                console.log('Max polling attempts reached');
+                if (pollInterval) {
+                  clearInterval(pollInterval);
+                  pollInterval = null;
+                }
                 setPolling(false);
                 Swal.close();
                 Swal.fire({
                   icon: 'warning',
                   title: 'Payment Status Timeout',
                   html: `
-                    <p>We're still waiting for payment confirmation.</p>
-                    <p>Please check your email for payment receipt or <a href="#" onclick="window.location.reload()">try refreshing</a>.</p>
+                    <div style="text-align: center;">
+                      <p>We're still waiting for payment confirmation.</p>
+                      <p>Please check your email for payment receipt.</p>
+                      <button onclick="window.location.reload()" style="background: #3085d6; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-top: 10px;">
+                        Refresh Page
+                      </button>
+                    </div>
                   `,
-                  confirmButtonColor: '#3085d6',
-                  confirmButtonText: 'Check Email',
-                  showCancelButton: true,
-                  cancelButtonText: 'Close'
+                  showConfirmButton: false,
+                  showCloseButton: true
                 });
               }
             } catch (err) {
               console.error('Error in polling:', err);
             }
-          }, 5000); // Poll every 5 seconds
-        }, 15000); // Start polling after 15 seconds
+          }, 5000);
+        }, 20000);
       },
       willClose: () => {
-        // Clean up polling
         if (pollInterval) {
           clearInterval(pollInterval);
-          setPolling(false);
+          pollInterval = null;
         }
+        setPolling(false);
       }
     });
   };
@@ -361,15 +399,14 @@ export default function PesapalPayments({ setUserData }) {
       return;
     }
 
-    // Show confirmation dialog before proceeding
     const result = await Swal.fire({
       icon: 'question',
       title: 'Confirm Payment',
       html: `
-        <div style="text-align: left;">
-          <p><strong>Plan:</strong> ${returnPeriod()} VIP</p>
-          <p><strong>Amount:</strong> KSH ${price}</p>
-          <p><strong>Duration:</strong> ${returnPeriod()}</p>
+        <div style="text-align: left; padding: 10px;">
+          <p style="margin: 5px 0;"><strong>Plan:</strong> ${returnPeriod()} VIP</p>
+          <p style="margin: 5px 0;"><strong>Amount:</strong> KSH ${price}</p>
+          <p style="margin: 5px 0;"><strong>Duration:</strong> ${returnPeriod()}</p>
         </div>
       `,
       showCancelButton: true,
@@ -397,15 +434,13 @@ export default function PesapalPayments({ setUserData }) {
     }
   };
 
-  // Handle callback from Pesapal (when redirected back to your site)
+  // Handle callback from Pesapal
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const trackingId = urlParams.get('OrderTrackingId');
-    const merchantRef = urlParams.get('OrderMerchantReference');
     const notificationType = urlParams.get('OrderNotificationType');
     
     if (trackingId && notificationType === 'CALLBACKURL' && !polling) {
-      // User was redirected back from Pesapal
       setProcessing(true);
       
       Swal.fire({
@@ -419,7 +454,6 @@ export default function PesapalPayments({ setUserData }) {
         }
       });
       
-      // Check payment status immediately
       checkPaymentStatus(trackingId, handleUpgrade, () => {
         setProcessing(false);
         Swal.close();
@@ -497,45 +531,65 @@ export default function PesapalPayments({ setUserData }) {
   );
 }
 
-// Add this CSS to your Ticket.scss file
+// Add styles
 const additionalStyles = `
-.swal2-popup {
-  padding: 1rem !important;
-  border-radius: 15px !important;
+.payment-swal-container {
+  z-index: 9999 !important;
+}
+
+.payment-swal-popup {
+  height: 650px !important;
+  max-width: 1000px !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  border-radius: 16px !important;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3) !important;
+}
+
+.payment-swal-close {
+  position: absolute !important;
+  right: 15px !important;
+  top: 15px !important;
+  color: #666 !important;
+  font-size: 28px !important;
+  font-weight: bold !important;
+  z-index: 10000 !important;
+  background: white !important;
+  width: 35px !important;
+  height: 35px !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2) !important;
+  transition: all 0.3s ease !important;
+}
+
+.payment-swal-close:hover {
+  background: #f0f0f0 !important;
+  transform: scale(1.1) !important;
+  color: #333 !important;
 }
 
 .swal2-title {
   color: #333 !important;
   font-weight: 600 !important;
+  font-size: 24px !important;
+  padding: 20px 20px 0 20px !important;
+  margin: 0 !important;
 }
 
 .swal2-html-container {
-  margin: .8em 0 !important;
-}
-
-.swal2-confirm {
-  border-radius: 8px !important;
-  padding: 10px 24px !important;
-  font-weight: 600 !important;
-}
-
-.swal2-cancel {
-  border-radius: 8px !important;
-  padding: 10px 24px !important;
-  font-weight: 600 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
 }
 
 .swal2-toast {
   border-radius: 10px !important;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
-}
-
-.payment-modal-popup {
-  height: 600px !important;
-  max-width: 900px !important;
-  padding: 0 !important;
-  overflow: hidden !important;
-  border-radius: 15px !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2) !important;
+  font-size: 14px !important;
+  padding: 12px 20px !important;
 }
 
 .btn {
@@ -567,10 +621,6 @@ const additionalStyles = `
 .btn:not(:disabled):hover {
   transform: translateY(-3px);
   box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
-}
-
-.btn:not(:disabled):active {
-  transform: translateY(-1px);
 }
 
 @keyframes spin {
@@ -617,14 +667,20 @@ label {
 h4 {
   text-align: center;
   color: #333;
-  margin: 16px 0;
+  margin: 20px 0;
   font-size: 20px;
 }
 `;
 
-// Add styles
+// Inject styles
 if (typeof document !== 'undefined') {
+  const existingStyle = document.getElementById('pesapal-payment-styles');
+  if (existingStyle) {
+    existingStyle.remove();
+  }
+  
   const style = document.createElement('style');
+  style.id = 'pesapal-payment-styles';
   style.textContent = additionalStyles;
   document.head.appendChild(style);
 }
